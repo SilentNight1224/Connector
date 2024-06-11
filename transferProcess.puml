@@ -1,0 +1,106 @@
+@startuml TransferProcess
+class TransferProcess {
+    -state: int
+    -protocolMessages: ProtocolMessages
+    -type: Type
+    -dataPlaneId: String
+    -errorDetail: String
+    ...
+    --
+    +void transitionProvisioningRequested()
+    +void transitionProvisioned()
+    +void transitionRequesting()
+    +void transitionRequested()
+    +void transitionStarting()
+    +void transitionStarted(String dataPlaneId)
+    +void transitionCompleted()
+    +void transitionCompleting()
+    +void transitionDeprovisioning()
+    +void transitionDeprovisioned(String errorDetail)
+    +void transitionTerminating(String errorDetail)
+    +void transitionTerminated(String message)
+    +void transitionSuspending(String reason)
+    +void transitionSuspended(String reason)
+    +void transitionResuming()
+    +void transitionResumed()
+    +boolean currentStateIsOneOf(TransferProcessStates... states)
+    ...
+    +void transition(TransferProcessStates end, TransferProcessStates... starts)
+    +void transition(TransferProcessStates end, Predicate<TransferProcessStates> canTransitTo)
+    -void transitionTo(int targetState)
+    ...
+}
+
+abstract class StatefulEntity<T extends StatefulEntity<T>> {
+    -state: int
+    -stateCount: int
+    -stateTimestamp: long
+    -traceContext: Map<String, String>
+    -errorDetail: String
+    -pending: boolean 
+    --
+    +void transitionTo(int targetState)
+    #void updateStateTimestamp()
+    #void setModified()
+}
+
+class ProtocolMessages {
+    -lastSent: String
+    -received: List<String>
+    --
+    +void setLastSent(String lastSent)
+    +String getLastSent()
+    +void addReceived(String received)
+    +boolean isAlreadyReceived(String id)
+    +List<String> getReceived()
+    +void setReceived(List<String> received)
+}
+
+enum TransferProcessStates {
+    +INITIAL: int = 100
+    +PROVISIONING: int = 200
+    +PROVISIONING_REQUESTED: int = 250
+    +PROVISIONED: int = 300
+    +REQUESTING: int = 400
+    +REQUESTED: int = 500
+    +STARTING: int = 550
+    +STARTED: int = 600
+    +SUSPENDING: int = 650
+    +SUSPENDED: int = 700
+    +RESUMING: int = 720
+    +RESUMED: int = 725
+    +COMPLETING: int = 750
+    +COMPLETED: int = 800
+    +TERMINATING: int = 825
+    +TERMINATED: int = 850
+    +DEPROVISIONING: int = 900
+    +DEPROVISIONING_REQUESTED: int = 950
+    +DEPROVISIONED: int = 1000
+    ---
+    -code: int
+    -FINAL_STATES: List<Integer>
+    ---
+    +from(int code): TransferProcessStates
+    +isFinal(int state): boolean
+    +code(): int
+}
+
+enum TransferProcess::Type {
+    CONSUMER
+    PROVIDER
+}
+
+TransferProcess ...|> ProtocolMessages : depends on
+TransferProcess ---> TransferProcessStates: extends
+TransferProcess ---> StatefulEntity: extends
+TransferProcess -right- TransferProcess::Type : type
+
+note left of TransferProcess
+有关state转换的方法都需要调用transition函数，
+而transition函数需要调用transitionTo来具体实现
+end note
+
+note top of ProtocolMessages
+记录发送和接收的协议消息历史
+end note
+@enduml
